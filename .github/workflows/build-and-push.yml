@@ -41,6 +41,10 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     
     steps:
     - name: Checkout code
@@ -116,7 +120,7 @@ jobs:
         severity: 'CRITICAL,HIGH'
 
     - name: Upload API Gateway Scan Results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results-api-gateway.sarif'
@@ -298,6 +302,9 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    permissions:
+      contents: read
+      id-token: write
     
     steps:
     - name: Checkout code
