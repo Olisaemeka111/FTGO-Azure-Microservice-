@@ -140,6 +140,8 @@ spec:
         app: jaeger
         jaeger-infra: query-pod
     spec:
+      nodeSelector:
+        kubernetes.io/os: linux
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000

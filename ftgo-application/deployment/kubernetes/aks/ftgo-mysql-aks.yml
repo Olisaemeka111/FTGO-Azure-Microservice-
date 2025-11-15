@@ -46,12 +46,10 @@ spec:
             readOnlyRootFilesystem: false
             runAsNonRoot: true
             runAsUser: 999
-            capabilities:
-              drop:
-                - ALL
-          args:
-              - "--ignore-db-dir=lost+found"
-          ports:
+                 capabilities:
+                   drop:
+                     - ALL
+                ports:
               - containerPort: 3306
           env:
             - name: MYSQL_ROOT_PASSWORD
