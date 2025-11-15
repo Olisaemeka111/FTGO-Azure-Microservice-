@@ -12,10 +12,18 @@ on:
       - 'ftgo-application/settings.gradle'
       - 'ftgo-application/gradle.properties'
       - 'ftgo-application/**/Dockerfile'
+      - '.github/workflows/**'
   pull_request:
     branches:
       - master
       - main
+    paths:
+      - 'ftgo-application/ftgo-*/**'
+      - 'ftgo-application/buildSrc/**'
+      - 'ftgo-application/build.gradle'
+      - 'ftgo-application/settings.gradle'
+      - 'ftgo-application/gradle.properties'
+      - 'ftgo-application/**/Dockerfile'
   workflow_dispatch:
 
 env:
