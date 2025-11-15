@@ -32,6 +32,8 @@ env:
   RESOURCE_GROUP: rg-gentic-app
   JAVA_VERSION: '8'
   GRADLE_VERSION: '6.9'
+  EVENTUATE_COMMON_VERSION: '0.15.0.RELEASE'
+  EVENTUATE_SAGA_VERSION: '0.19.0.RELEASE'
 
 jobs:
   build-and-push:
@@ -141,7 +143,7 @@ jobs:
     - name: Build and push MySQL
       working-directory: ./ftgo-application/mysql
       run: |
-        docker build -t ${{ env.ACR_REGISTRY }}/mysql:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/mysql:latest .
+        docker build --build-arg EVENTUATE_COMMON_VERSION=${{ env.EVENTUATE_COMMON_VERSION }} --build-arg EVENTUATE_SAGA_VERSION=${{ env.EVENTUATE_SAGA_VERSION }} -t ${{ env.ACR_REGISTRY }}/mysql:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/mysql:latest .
         docker push ${{ env.ACR_REGISTRY }}/mysql:${{ github.sha }}
         docker push ${{ env.ACR_REGISTRY }}/mysql:latest
 
