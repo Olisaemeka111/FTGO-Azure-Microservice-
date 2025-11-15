@@ -1,0 +1,102 @@
+# Example Terraform Variables
+# Copy this file to terraform.tfvars and update with your values
+
+# Azure Subscription
+subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Resource Group
+resource_group_name = "rg-aks-hci-prod"
+location            = "eastus"
+
+# Azure Stack HCI Configuration
+azure_stack_hci_cluster_id = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-stackhci/providers/Microsoft.AzureStackHCI/clusters/my-hci-cluster"
+aks_hci_extension_id       = "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg-stackhci/providers/Microsoft.KubernetesConfiguration/extensions/aks-hci-extension"
+custom_location_name       = "custom-location-aks-hci"
+
+# Networking
+vnet_name              = "vnet-aks-hci"
+vnet_address_space     = ["10.0.0.0/16"]
+management_subnet_cidr = "10.0.1.0/24"
+workload_subnet_cidr   = "10.0.2.0/24"
+
+# Kubernetes Version
+kubernetes_version = "1.28.3"
+
+# Management Cluster
+management_cluster_name        = "aks-hci-management"
+management_control_plane_count = 1
+management_node_count          = 1
+management_node_vm_size        = "Standard_D4s_v3"
+
+# Workload Cluster
+workload_cluster_name        = "aks-hci-workload"
+workload_control_plane_count = 3
+enable_control_plane_ha      = true
+
+# Linux Node Pools
+linux_node_pools = [
+  {
+    name       = "linuxpool1"
+    node_count = 2
+    vm_size    = "Standard_D4s_v3"
+    os_type    = "Linux"
+  },
+  {
+    name       = "linuxpool2"
+    node_count = 2
+    vm_size    = "Standard_D4s_v3"
+    os_type    = "Linux"
+  }
+]
+
+# Windows Node Pools
+windows_node_pools = [
+  {
+    name       = "winpool1"
+    node_count = 2
+    vm_size    = "Standard_D4s_v3"
+    os_type    = "Windows"
+  }
+]
+
+# Load Balancer
+load_balancer_sku = "Standard"
+api_server_sku    = "Standard"
+
+# Storage
+storage_account_name        = "stakshciprod"
+storage_account_tier        = "Standard"
+storage_account_replication = "LRS"
+storage_container_names     = ["cluster-data", "backups", "logs"]
+
+# Azure Arc
+enable_azure_arc            = true
+enable_windows_admin_center = true
+
+# Auto Scaling Configuration
+enable_metrics_server             = true
+enable_cluster_autoscaler         = true
+enable_node_pool_autoscaling      = true
+autoscaler_expander               = "least-waste"
+scale_down_enabled                = true
+scale_down_delay_after_add        = "10m"
+scale_down_unneeded_time          = "10m"
+scale_down_utilization_threshold  = 0.5
+
+# Node Pool Scaling Limits
+linux_node_pool_min_count    = 1
+linux_node_pool_max_count    = 10
+windows_node_pool_min_count  = 1
+windows_node_pool_max_count  = 8
+
+# KEDA (Event-Driven Autoscaling)
+enable_keda = false
+
+# Tags
+tags = {
+  Environment = "Production"
+  ManagedBy   = "Terraform"
+  Project     = "AKS-HCI"
+  Owner       = "Infrastructure Team"
+}
+

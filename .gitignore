@@ -1,0 +1,128 @@
+# Terraform Files
+# State files - contain sensitive data and should not be committed
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+*.tfstate.1763143316.backup
+*.tfstate.1763143330.backup
+
+# Crash log files
+crash.log
+crash.*.log
+
+# Exclude all .tfvars files, which are likely to contain sensitive data
+*.tfvars
+*.tfvars.json
+
+# Ignore override files as they are usually used to override resources locally
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Ignore CLI configuration files
+.terraformrc
+terraform.rc
+
+# Ignore lock files (optional - some teams commit these)
+# .terraform.lock.hcl
+
+# Terraform directories
+.terraform/
+.terraform.lock.hcl
+
+# Plan files
+*.tfplan
+*.tfplan.json
+tfplan
+
+# Terraform debug logs
+terraform-debug.log
+*.log
+
+# Backup files
+*.backup
+*.bak
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Python (if using any Python scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Node modules (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Secrets and credentials
+secrets/
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*.jks
+
+# Azure CLI credentials
+.azure/
+
+# Output files
+destroy-output.log
+state-resources.txt
+acr-name.txt
+
+# Large files and archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# OS files
+Thumbs.db
+Desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Build artifacts (if any)
+build/
+dist/
+target/
+
+# Gradle (for FTGO application)
+ftgo-application/.gradle/
+ftgo-application/build/
+ftgo-application/**/build/
+ftgo-application/.idea/
+ftgo-application/*.iml
+
+# Docker (optional - if you want to exclude Docker build context)
+# *.dockerignore
+
+# Keep important files
+!.gitignore
+!README.md
+!*.md
+!.github/
