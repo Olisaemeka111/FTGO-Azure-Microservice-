@@ -2,11 +2,18 @@
 
 ## Step 1: Azure Service Principal Credentials
 
-**File Created**: `azure-credentials-clean.json`
+**How to Create**:
+
+```powershell
+az ad sp create-for-rbac --name "ftgo-cicd-sp" `
+  --role contributor `
+  --scopes /subscriptions/657bf059-e3b7-401b-816d-367cac7b220a/resourceGroups/rg-gentic-app `
+  --sdk-auth
+```
 
 **Add to GitHub as**: `AZURE_CREDENTIALS`
 
-**Value**: Copy the entire JSON from `azure-credentials-clean.json`
+**Value**: Copy the entire JSON output from the command above
 
 The JSON contains:
 - `clientId`: Service Principal Application ID
@@ -34,7 +41,7 @@ The JSON contains:
 
    **Secret 1: AZURE_CREDENTIALS**
    - Name: `AZURE_CREDENTIALS`
-   - Value: Copy entire content from `azure-credentials-clean.json`
+   - Value: Copy entire JSON from the service principal creation command
    - Click **Add secret**
 
    **Secret 2: ACR_USERNAME**
@@ -50,8 +57,11 @@ The JSON contains:
 ### Via GitHub CLI:
 
 ```bash
-# Add Azure credentials
-gh secret set AZURE_CREDENTIALS < azure-credentials-clean.json
+# Create service principal and add to GitHub
+az ad sp create-for-rbac --name "ftgo-cicd-sp" \
+  --role contributor \
+  --scopes /subscriptions/657bf059-e3b7-401b-816d-367cac7b220a/resourceGroups/rg-gentic-app \
+  --sdk-auth | gh secret set AZURE_CREDENTIALS
 
 # Add ACR credentials
 gh secret set ACR_USERNAME --body "acrgenticapp2932"
