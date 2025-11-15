@@ -71,6 +71,7 @@ jobs:
     - name: Build Java services with Gradle
       working-directory: ./ftgo-application
       run: |
+        chmod +x ./gradlew
         ./gradlew clean build -x test
         # Build JARs for all services
         ./gradlew :ftgo-api-gateway:bootJar
