@@ -410,16 +410,16 @@ jobs:
 
     - name: Wait for deployments to be ready
       run: |
-        echo "Waiting for application services (this may take 10-15 minutes)..."
-        echo "Note: Services will become ready once infrastructure is healthy"
-        kubectl wait --for=condition=available deployment/ftgo-api-gateway -n ftgo --timeout=900s || echo "API Gateway still pending"
-        kubectl wait --for=condition=available deployment/ftgo-consumer-service -n ftgo --timeout=900s || echo "Consumer service still pending"
-        kubectl wait --for=condition=available deployment/ftgo-restaurant-service -n ftgo --timeout=900s || echo "Restaurant service still pending"
-        kubectl wait --for=condition=available deployment/ftgo-order-service -n ftgo --timeout=900s || echo "Order service still pending"
-        kubectl wait --for=condition=available deployment/ftgo-kitchen-service -n ftgo --timeout=900s || echo "Kitchen service still pending"
-        kubectl wait --for=condition=available deployment/ftgo-accounting-service -n ftgo --timeout=900s || echo "Accounting service still pending"
-        kubectl wait --for=condition=available deployment/ftgo-order-history-service -n ftgo --timeout=900s || echo "Order History service still pending"
-        echo "Deployment wait completed (some services may still be starting)"
+        echo "Waiting for application services..."
+        echo "Note: Services will continue starting in background"
+        kubectl wait --for=condition=available deployment/ftgo-api-gateway -n ftgo --timeout=120s || echo "API Gateway still starting"
+        kubectl wait --for=condition=available deployment/ftgo-consumer-service -n ftgo --timeout=60s || echo "Consumer service still starting"
+        kubectl wait --for=condition=available deployment/ftgo-restaurant-service -n ftgo --timeout=60s || echo "Restaurant service still starting"
+        kubectl wait --for=condition=available deployment/ftgo-order-service -n ftgo --timeout=60s || echo "Order service still starting"
+        kubectl wait --for=condition=available deployment/ftgo-kitchen-service -n ftgo --timeout=60s || echo "Kitchen service still starting"
+        kubectl wait --for=condition=available deployment/ftgo-accounting-service -n ftgo --timeout=60s || echo "Accounting service still starting"
+        kubectl wait --for=condition=available deployment/ftgo-order-history-service -n ftgo --timeout=60s || echo "Order History service still starting"
+        echo "Deployment initiated - services will continue starting in background"
 
     - name: Get Load Balancer URLs
       id: get-lb-urls
