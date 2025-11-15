@@ -90,6 +90,12 @@ destroy-output.log
 state-resources.txt
 acr-name.txt
 
+# Azure credentials and secrets (NEVER commit these!)
+azure-credentials.json
+azure-credentials-clean.json
+*credentials*.json
+GITHUB_SECRETS_VALUES.md
+
 # Large files and archives
 *.zip
 *.tar

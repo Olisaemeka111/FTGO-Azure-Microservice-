@@ -1,0 +1,153 @@
+name: Build and Push FTGO Images to ACR
+
+on:
+  push:
+    branches:
+      - master
+      - main
+    paths:
+      - 'ftgo-application/ftgo-*/**'
+      - 'ftgo-application/buildSrc/**'
+      - 'ftgo-application/build.gradle'
+      - 'ftgo-application/settings.gradle'
+      - 'ftgo-application/gradle.properties'
+      - 'ftgo-application/**/Dockerfile'
+  pull_request:
+    branches:
+      - master
+      - main
+  workflow_dispatch:
+
+env:
+  ACR_NAME: acrgenticapp2932
+  ACR_REGISTRY: acrgenticapp2932.azurecr.io
+  RESOURCE_GROUP: rg-gentic-app
+  JAVA_VERSION: '8'
+  GRADLE_VERSION: '6.9'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK ${{ env.JAVA_VERSION }}
+      uses: actions/setup-java@v4
+      with:
+        java-version: ${{ env.JAVA_VERSION }}
+        distribution: 'adopt'
+
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: ${{ env.GRADLE_VERSION }}
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to Azure Container Registry
+      run: |
+        az acr login --name ${{ env.ACR_NAME }}
+    
+    - name: Login to Docker (ACR)
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.ACR_REGISTRY }}
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+
+    - name: Build Java services with Gradle
+      working-directory: ./ftgo-application
+      run: |
+        ./gradlew clean build -x test
+        # Build JARs for all services
+        ./gradlew :ftgo-api-gateway:bootJar
+        ./gradlew :ftgo-consumer-service:bootJar
+        ./gradlew :ftgo-restaurant-service:bootJar
+        ./gradlew :ftgo-order-service:bootJar
+        ./gradlew :ftgo-kitchen-service:bootJar
+        ./gradlew :ftgo-accounting-service:bootJar
+        ./gradlew :ftgo-order-history-service:bootJar
+
+    - name: Build and push API Gateway
+      working-directory: ./ftgo-application/ftgo-api-gateway
+      run: |
+        docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-api-gateway:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-api-gateway:latest .
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-api-gateway:${{ github.sha }}
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-api-gateway:latest
+
+    - name: Build and push Consumer Service
+      working-directory: ./ftgo-application/ftgo-consumer-service
+      run: |
+        docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-consumer-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-consumer-service:latest .
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-consumer-service:${{ github.sha }}
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-consumer-service:latest
+
+    - name: Build and push Restaurant Service
+      working-directory: ./ftgo-application/ftgo-restaurant-service
+      run: |
+        docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-restaurant-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-restaurant-service:latest .
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-restaurant-service:${{ github.sha }}
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-restaurant-service:latest
+
+    - name: Build and push Order Service
+      working-directory: ./ftgo-application/ftgo-order-service
+      run: |
+        docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-order-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-order-service:latest .
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-order-service:${{ github.sha }}
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-order-service:latest
+
+    - name: Build and push Kitchen Service
+      working-directory: ./ftgo-application/ftgo-kitchen-service
+      run: |
+        docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-kitchen-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-kitchen-service:latest .
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-kitchen-service:${{ github.sha }}
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-kitchen-service:latest
+
+    - name: Build and push Accounting Service
+      working-directory: ./ftgo-application/ftgo-accounting-service
+      run: |
+        docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-accounting-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-accounting-service:latest .
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-accounting-service:${{ github.sha }}
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-accounting-service:latest
+
+    - name: Build and push Order History Service
+      working-directory: ./ftgo-application/ftgo-order-history-service
+      run: |
+        docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-order-history-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-order-history-service:latest .
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-order-history-service:${{ github.sha }}
+        docker push ${{ env.ACR_REGISTRY }}/ftgo-order-history-service:latest
+
+    - name: Build and push DynamoDB Init
+      working-directory: ./ftgo-application/dynamodblocal-init
+      run: |
+        docker build -t ${{ env.ACR_REGISTRY }}/dynamodblocal-init:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/dynamodblocal-init:latest .
+        docker push ${{ env.ACR_REGISTRY }}/dynamodblocal-init:${{ github.sha }}
+        docker push ${{ env.ACR_REGISTRY }}/dynamodblocal-init:latest
+
+    - name: Build and push MySQL
+      working-directory: ./ftgo-application/mysql
+      run: |
+        docker build -t ${{ env.ACR_REGISTRY }}/mysql:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/mysql:latest .
+        docker push ${{ env.ACR_REGISTRY }}/mysql:${{ github.sha }}
+        docker push ${{ env.ACR_REGISTRY }}/mysql:latest
+
+    - name: Summary
+      run: |
+        echo "## Images Built and Pushed to ACR" >> $GITHUB_STEP_SUMMARY
+        echo "- ftgo-api-gateway" >> $GITHUB_STEP_SUMMARY
+        echo "- ftgo-consumer-service" >> $GITHUB_STEP_SUMMARY
+        echo "- ftgo-restaurant-service" >> $GITHUB_STEP_SUMMARY
+        echo "- ftgo-order-service" >> $GITHUB_STEP_SUMMARY
+        echo "- ftgo-kitchen-service" >> $GITHUB_STEP_SUMMARY
+        echo "- ftgo-accounting-service" >> $GITHUB_STEP_SUMMARY
+        echo "- ftgo-order-history-service" >> $GITHUB_STEP_SUMMARY
+        echo "- dynamodblocal-init" >> $GITHUB_STEP_SUMMARY
+        echo "- mysql" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Registry: ${{ env.ACR_REGISTRY }}" >> $GITHUB_STEP_SUMMARY
+
