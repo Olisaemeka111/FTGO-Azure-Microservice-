@@ -1,5 +1,6 @@
-FROM python:2.7.16-alpine3.9
-RUN pip install awscli --upgrade
+    FROM python:3.11-alpine
+    RUN pip install --upgrade pip && \
+        pip install awscli
 COPY create-dynamodb-tables.sh .
 COPY ftgo-order-history.json .
 COPY wait-for-dynamodblocal.sh .
