@@ -47,7 +47,7 @@ spec:
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           runAsNonRoot: true
           runAsUser: 1000
           capabilities:
@@ -148,7 +148,7 @@ spec:
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           runAsNonRoot: true
           runAsUser: 1000
           capabilities:
@@ -254,7 +254,7 @@ spec:
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           runAsNonRoot: true
           runAsUser: 1000
           capabilities:
@@ -352,7 +352,7 @@ spec:
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           runAsNonRoot: true
           runAsUser: 1000
           capabilities:
@@ -450,7 +450,7 @@ spec:
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           runAsNonRoot: true
           runAsUser: 1000
           capabilities:
@@ -548,7 +548,7 @@ spec:
         imagePullPolicy: Always
         securityContext:
           allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
+          readOnlyRootFilesystem: false
           runAsNonRoot: true
           runAsUser: 1000
           capabilities:
