@@ -12,11 +12,11 @@ This guide covers the complete CI/CD setup for building container images and dep
 - **Resource Group**: `rg-gentic-app`
 - **Location**: `eastus`
 - **SKU**: Basic
-- **Status**: ✅ Created and configured
+- **Status**: Created and configured
 
 ### 2. AKS Integration
-- ✅ AKS cluster has been granted access to ACR
-- ✅ No authentication needed when pulling images from ACR
+- AKS cluster has been granted access to ACR
+- No authentication needed when pulling images from ACR
 
 ### 3. CI/CD Pipeline
 
@@ -104,7 +104,7 @@ To get the password:
 az acr credential show --name acrgenticapp2932 --query "passwords[0].value" -o tsv
 ```
 
-⚠️ **Note**: Store these credentials securely. Consider using Azure Key Vault for production.
+**Note**: Store these credentials securely. Consider using Azure Key Vault for production.
 
 ## Images to be Built
 
@@ -170,15 +170,15 @@ image: acrgenticapp2932.azurecr.io/ftgo-api-gateway:latest
 
 ## Next Steps
 
-1. ✅ ACR created
-2. ✅ AKS access configured
-3. ✅ CI/CD pipeline created
-4. ✅ Build script created
-5. ⏳ Configure GitHub secrets
-6. ⏳ Push code to GitHub
-7. ⏳ Trigger CI/CD pipeline
-8. ⏳ Update Kubernetes manifests with ACR images
-9. ⏳ Deploy to AKS
+1. ACR created
+2. AKS access configured
+3. CI/CD pipeline created
+4. Build script created
+5. Configure GitHub secrets
+6. Push code to GitHub
+7. Trigger CI/CD pipeline
+8. Update Kubernetes manifests with ACR images
+9. Deploy to AKS
 
 ## Files Created
 

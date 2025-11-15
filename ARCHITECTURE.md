@@ -1,76 +1,65 @@
-# Architecture Documentation - Azure AKS on Azure Stack HCI
+# Architecture Documentation - Azure AKS Cloud-Native Deployment
 
-This document provides detailed architecture information for the Azure AKS on Azure Stack HCI deployment.
+This document provides detailed architecture information for the cloud-native Azure Kubernetes Service (AKS) deployment with FTGO microservices application.
 
 ## Overview
 
-This architecture implements a production-ready Azure Kubernetes Service (AKS) infrastructure on Azure Stack HCI, featuring:
+This architecture implements a production-ready Azure Kubernetes Service (AKS) infrastructure on Azure cloud, featuring:
 
-- **Hybrid Cloud Architecture**: On-premises HCI infrastructure with Azure management
+- **Cloud-Native Architecture**: Fully managed AKS clusters on Azure
 - **High Availability**: Redundant control planes and load balancers
 - **Multi-Platform Support**: Both Linux and Windows container workloads
-- **Azure Integration**: Azure Arc, Monitor, Policy, and Defender capabilities
-- **Security**: Network isolation, RBAC, and encrypted communications
+- **Azure Integration**: Azure Monitor, Policy, and Defender capabilities
+- **Security**: Network isolation, RBAC, security contexts, and encrypted communications
+- **Observability**: Complete monitoring stack with Prometheus, Grafana, Jaeger, and Loki
+- **CI/CD**: Automated build, scan, and deployment pipeline
 
 ## Architecture Diagram Components
 
-### 1. Windows Admin Center / Azure Arc
+### 1. Management Cluster (AKS)
 
-**Purpose**: Management and governance layer
-
-**Components**:
-- Windows Admin Center for GUI-based management
-- Azure Arc for Azure Portal integration
-- Centralized monitoring and policy enforcement
-
-**Capabilities**:
-- Cluster lifecycle management
-- Application deployment
-- Monitoring and diagnostics
-- Policy compliance
-- Security management
-
-### 2. Management Cluster (AKS Host)
-
-**Purpose**: Infrastructure management and control
+**Purpose**: Infrastructure management and governance
 
 **Architecture**:
 ```
 ┌─────────────────────────────────┐
 │    Management Cluster           │
 │  ┌─────────────────────────┐    │
-│  │   Load Balancer         │    │
-│  │   (Public IP)           │    │
+│  │   Azure Load Balancer   │    │
+│  │   (Standard SKU)        │    │
 │  └──────────┬──────────────┘    │
 │             │                   │
 │  ┌──────────▼──────────────┐    │
-│  │   API Server            │    │
-│  │   (Kubernetes Control)  │    │
+│  │   Control Plane (HA)    │    │
+│  │   - API Server          │    │
+│  │   - etcd                │    │
+│  │   - Scheduler           │    │
 │  └──────────┬──────────────┘    │
 │             │                   │
 │  ┌──────────▼──────────────┐    │
-│  │   Worker VM             │    │
-│  │   (System Services)     │    │
+│  │   System Node Pool      │    │
+│  │   - System Services     │    │
+│  │   - Monitoring         │    │
 │  └─────────────────────────┘    │
 └─────────────────────────────────┘
 ```
 
 **Specifications**:
-- **Control Plane**: 1 node (scalable)
-- **Worker Nodes**: 1+ VMs
-- **VM Size**: Standard_D4s_v3 (default)
+- **Control Plane**: Managed by Azure (HA)
+- **System Node Pool**: 1 node
+- **VM Size**: Standard_D2s_v3
 - **OS**: Linux
-- **Purpose**: AKS infrastructure management
+- **Purpose**: AKS infrastructure management and governance
 
-**Key Services**:
-- Cluster API
-- Lifecycle management
-- Certificate management
-- Authentication/Authorization
+**Key Features**:
+- RBAC enabled
+- OIDC issuer enabled
+- Azure Policy integration
+- Azure Monitor integration
 
-### 3. Workload Cluster
+### 2. Workload Cluster
 
-**Purpose**: Run production containerized applications
+**Purpose**: Run production containerized applications (FTGO microservices)
 
 **Architecture**:
 ```
@@ -109,58 +98,68 @@ This architecture implements a production-ready Azure Kubernetes Service (AKS) i
 ```
 
 **Specifications**:
-- **Control Plane**: 3 nodes (HA configuration)
-- **Linux Node Pools**: 2 pools × 2 VMs = 4 VMs
-- **Windows Node Pools**: 1 pool × 2 VMs = 2 VMs
-- **Total Worker Nodes**: 6 VMs
-- **VM Size**: Standard_D4s_v3 (configurable)
+- **Control Plane**: Managed by Azure (HA)
+- **System Node Pool**: 1 node (Standard_D2s_v3)
+- **Linux Node Pools**: Autoscaling enabled
+- **Windows Node Pool**: 1 pool (winp1)
+- **VM Size**: Standard_D2s_v3
+- **Availability Zone**: Zone 3 (eastus)
+- **Purpose**: Production application workloads
 
-**High Availability Features**:
-- Multi-node control plane
-- Availability zone distribution
-- Automatic failover
-- Load balancer health probes
+**Key Features**:
+- RBAC enabled
+- OIDC issuer enabled
+- Network Policy: Calico
+- Auto-scaling enabled
+- Standard Load Balancer
 
-### 4. Azure Stack HCI Datacenter
+### 3. Monitoring and Observability Stack
 
-**Purpose**: Physical infrastructure layer
+**Purpose**: Complete observability for metrics, logs, and traces
 
-**Architecture**:
-```
-┌──────────────────────────────────────────────────────────┐
-│         Azure Stack HCI Datacenter                       │
-│                                                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │
-│  │ Physical    │  │ Physical    │  │ Physical    │ ... │
-│  │ Host 1      │  │ Host 2      │  │ Host 3      │     │
-│  │             │  │             │  │             │     │
-│  │ - Hyper-V   │  │ - Hyper-V   │  │ - Hyper-V   │     │
-│  │ - VMs       │  │ - VMs       │  │ - VMs       │     │
-│  │ - Storage   │  │ - Storage   │  │ - Storage   │     │
-│  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘     │
-│         │                │                │             │
-│         └────────────────┴────────────────┘             │
-│                          │                              │
-│                  ┌───────▼────────┐                     │
-│                  │  Shared Storage │                     │
-│                  │  (Cluster Disk) │                     │
-│                  │  - Volumes      │                     │
-│                  │  - Snapshots    │                     │
-│                  └─────────────────┘                     │
-└──────────────────────────────────────────────────────────┘
-```
+**Namespace**: `monitoring`
 
 **Components**:
-- **Physical Hosts**: 4 servers (minimum 2 for HA)
-- **Hypervisor**: Hyper-V on each host
-- **Storage**: Storage Spaces Direct (S2D)
-- **Networking**: SDN (Software Defined Networking)
+```
+┌──────────────────────────────────────────────┐
+│         Monitoring Namespace                 │
+│                                              │
+│  ┌────────────────────────────────────────┐ │
+│  │  Metrics Collection                     │ │
+│  │  - Prometheus (metrics)                 │ │
+│  │  - Node Exporter (node metrics)         │ │
+│  │  - Kube State Metrics (K8s metrics)     │ │
+│  └────────────────────────────────────────┘ │
+│                                              │
+│  ┌────────────────────────────────────────┐ │
+│  │  Visualization                          │ │
+│  │  - Grafana (dashboards)                 │ │
+│  └────────────────────────────────────────┘ │
+│                                              │
+│  ┌────────────────────────────────────────┐ │
+│  │  Logging                                │ │
+│  │  - Loki (log aggregation)              │ │
+│  │  - Promtail (log collection)           │ │
+│  └────────────────────────────────────────┘ │
+│                                              │
+│  ┌────────────────────────────────────────┐ │
+│  │  Tracing                                │ │
+│  │  - Jaeger (distributed tracing)         │ │
+│  └────────────────────────────────────────┘ │
+│                                              │
+│  ┌────────────────────────────────────────┐ │
+│  │  Alerting                               │ │
+│  │  - Alertmanager (alert routing)         │ │
+│  └────────────────────────────────────────┘ │
+└──────────────────────────────────────────────┘
+```
 
-**Specifications** (Minimum):
-- **CPUs**: 32+ cores per host
-- **Memory**: 128GB+ per host
-- **Storage**: 4TB+ per host (NVMe/SSD)
-- **Network**: 25Gbps+ network adapters
+**Load Balancers**:
+- Grafana: Port 80 (admin/admin)
+- Prometheus: Port 80
+- Jaeger: Port 80
+
+**Access**: All tools accessible via LoadBalancer services
 
 ## Network Architecture
 
@@ -240,21 +239,23 @@ This architecture implements a production-ready Azure Kubernetes Service (AKS) i
 │     Application Storage                     │
 │  ┌─────────────────────────────────────┐    │
 │  │  Persistent Volume Claims (PVCs)    │    │
-│  │  - StatefulSets                     │    │
-│  │  - Database Storage                 │    │
-│  │  - Application Data                 │    │
+│  │  - MySQL (1Gi)                      │    │
+│  │  - Kafka (1Gi)                      │    │
+│  │  - Zookeeper (1Gi)                  │    │
+│  │  - DynamoDB (1Gi)                   │    │
+│  │  - Loki (10Gi)                      │    │
 │  └──────────────┬──────────────────────┘    │
 │                 │                           │
 │  ┌──────────────▼──────────────────────┐    │
 │  │  Persistent Volumes (PVs)           │    │
-│  │  - CSI Drivers (NFS/SMB)            │    │
+│  │  - Azure Managed Disks              │    │
 │  │  - Dynamic Provisioning             │    │
 │  └──────────────┬──────────────────────┘    │
 │                 │                           │
 │  ┌──────────────▼──────────────────────┐    │
 │  │  Storage Classes                    │    │
-│  │  - Standard                         │    │
-│  │  - Premium                          │    │
+│  │  - default (Azure Managed Disks)    │    │
+│  │  - managed-premium (SSD)            │    │
 │  └──────────────┬──────────────────────┘    │
 └─────────────────┼───────────────────────────┘
                   │
@@ -262,36 +263,55 @@ This architecture implements a production-ready Azure Kubernetes Service (AKS) i
 │     Azure Storage Account                   │
 │  ┌─────────────────────────────────────┐    │
 │  │  Blob Storage                       │    │
-│  │  - cluster-data container           │    │
-│  │  - backups container                │    │
-│  │  - logs container                   │    │
+│  │  - Container images (ACR)           │    │
+│  │  - Terraform state                  │    │
+│  │  - Backups                          │    │
 │  └─────────────────────────────────────┘    │
 │  ┌─────────────────────────────────────┐    │
 │  │  File Shares                        │    │
-│  │  - cluster-data (100GB)             │    │
-│  │  - backups (500GB)                  │    │
-│  └─────────────────────────────────────┘    │
-└─────────────────────────────────────────────┘
-                  │
-┌─────────────────▼───────────────────────────┐
-│     Azure Stack HCI Storage                 │
-│  ┌─────────────────────────────────────┐    │
-│  │  Storage Spaces Direct (S2D)        │    │
-│  │  - NVMe/SSD Cache Tier              │    │
-│  │  - HDD/SSD Capacity Tier            │    │
-│  │  - 3-way Mirror or Parity           │    │
+│  │  - Shared storage (optional)        │    │
 │  └─────────────────────────────────────┘    │
 └─────────────────────────────────────────────┘
 ```
 
 ### Storage Features
 
-- **CSI Drivers**: NFS and SMB support
-- **Dynamic Provisioning**: Automatic PV creation
-- **Versioning**: Blob versioning enabled
-- **Retention**: 7-day soft delete
-- **Security**: HTTPS-only, TLS 1.2+
-- **Redundancy**: LRS (locally redundant)
+- **Azure Managed Disks**: Automatic PV creation
+- **Storage Classes**: Default and premium options
+- **Dynamic Provisioning**: Automatic volume creation
+- **Security**: Encrypted at rest
+- **Redundancy**: LRS (locally redundant storage)
+- **Backup**: Azure Backup integration available
+
+## Application Architecture
+
+### FTGO Microservices Application
+
+**Namespace**: `ftgo`
+
+**Application Services (7 microservices)**:
+1. **ftgo-api-gateway** - API Gateway (LoadBalancer, port 80)
+2. **ftgo-consumer-service** - Consumer Service
+3. **ftgo-restaurant-service** - Restaurant Service
+4. **ftgo-order-service** - Order Service
+5. **ftgo-kitchen-service** - Kitchen Service
+6. **ftgo-accounting-service** - Accounting Service
+7. **ftgo-order-history-service** - Order History Service
+
+**Infrastructure Services**:
+1. **MySQL** - Database (StatefulSet, 1Gi storage)
+2. **Apache Kafka** - Message broker (StatefulSet, 1Gi storage)
+3. **Zookeeper** - Required by Kafka (StatefulSet, 1Gi storage)
+4. **DynamoDB Local** - Used by order-history-service (StatefulSet, 1Gi storage)
+5. **CDC Service** - Change Data Capture service
+
+**Deployment Features**:
+- All services use ACR images
+- Security contexts (non-root, read-only filesystem)
+- Resource limits and requests
+- Health checks (liveness/readiness)
+- Network policies for service isolation
+- Secrets for database credentials
 
 ## Security Architecture
 
@@ -455,85 +475,205 @@ This architecture implements a production-ready Azure Kubernetes Service (AKS) i
 
 ## Monitoring & Observability
 
-### Monitoring Stack
+### Monitoring Stack Architecture
 
 ```
-┌──────────────────────────────────────────────┐
-│  Azure Monitor (Central)                     │
-│  - Metrics                                   │
-│  - Logs                                      │
-│  - Alerts                                    │
-└──────────────┬───────────────────────────────┘
-               │
-┌──────────────▼───────────────────────────────┐
-│  Container Insights                          │
-│  - Node metrics                              │
-│  - Pod metrics                               │
-│  - Container logs                            │
-└──────────────┬───────────────────────────────┘
-               │
-┌──────────────▼───────────────────────────────┐
-│  Kubernetes Metrics                          │
-│  - CPU/Memory usage                          │
-│  - Network I/O                               │
-│  - Storage I/O                               │
-│  - API server metrics                        │
-└──────────────┬───────────────────────────────┘
-               │
-┌──────────────▼───────────────────────────────┐
-│  Application Metrics                         │
-│  - Custom metrics                            │
-│  - APM traces                                │
-│  - Error rates                               │
-└──────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│              Monitoring Namespace                        │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Prometheus (Metrics Collection)                 │  │
+│  │  - Scrapes: K8s API, Nodes, Pods, Services       │  │
+│  │  - Storage: 30 days retention                     │  │
+│  │  - LoadBalancer: Port 80                          │  │
+│  └──────────────────────────────────────────────────┘  │
+│                          │                              │
+│  ┌───────────────────────▼──────────────────────────┐  │
+│  │  Grafana (Visualization)                         │  │
+│  │  - Pre-configured: Prometheus datasource         │  │
+│  │  - Dashboards: Kubernetes, Node, Application    │  │
+│  │  - LoadBalancer: Port 80 (admin/admin)          │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Loki + Promtail (Log Aggregation)               │  │
+│  │  - Promtail: DaemonSet (collects from all nodes) │  │
+│  │  - Loki: StatefulSet (10Gi storage)              │  │
+│  │  - Query: Via Grafana Logs panel                 │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Jaeger (Distributed Tracing)                    │  │
+│  │  - Collector: Receives traces                   │  │
+│  │  - Query: UI for trace visualization            │  │
+│  │  - Agent: DaemonSet for trace collection        │  │
+│  │  - LoadBalancer: Port 80                         │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Alertmanager (Alert Routing)                    │  │
+│  │  - Receives alerts from Prometheus              │  │
+│  │  - Routes to: Email, Slack, Webhooks            │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Node Exporter (Node Metrics)                   │  │
+│  │  - DaemonSet: One per node                      │  │
+│  │  - Metrics: CPU, Memory, Disk, Network         │  │
+│  └──────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │  Kube State Metrics (K8s Object Metrics)       │  │
+│  │  - Deployment, Pod, Service metrics             │  │
+│  │  - Resource quotas, limits                      │  │
+│  └──────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────┘
 ```
+
+### Metrics Collected
+
+**Infrastructure Metrics**:
+- Node CPU, memory, disk, network
+- Pod resource usage
+- Kubernetes object states
+- API server metrics
+
+**Application Metrics**:
+- FTGO service metrics (via Prometheus annotations)
+- Request rates and latency
+- Error rates
+- Custom business metrics
+
+**Log Aggregation**:
+- Pod logs from all namespaces
+- Container logs
+- Application logs
+- System logs
+
+**Distributed Tracing**:
+- Request traces across services
+- Service dependencies
+- Performance bottlenecks
+- Error propagation
 
 ### Key Metrics
 
-- **Cluster Health**: Node status, pod status
-- **Resource Utilization**: CPU, memory, storage
-- **Application Performance**: Response time, throughput
-- **Network**: Bandwidth, latency, errors
-- **Security**: Failed authentications, policy violations
+- **Cluster Health**: Node status, pod status, deployment health
+- **Resource Utilization**: CPU, memory, storage per node/pod
+- **Application Performance**: Response time, throughput, error rates
+- **Network**: Bandwidth, latency, connection errors
+- **Security**: Failed authentications, policy violations, vulnerability scans
+
+## CI/CD Pipeline Architecture
+
+### GitHub Actions Workflow
+
+**Workflow**: `.github/workflows/build-and-push.yml`
+
+**Stages**:
+1. **Build and Push**:
+   - Code linting and quality checks
+   - Dependency vulnerability scanning
+   - Build Java services with Gradle
+   - Build Docker images
+   - Container vulnerability scanning (Trivy)
+   - Push images to ACR
+
+2. **Deploy to AKS**:
+   - Create namespaces (ftgo, monitoring)
+   - Deploy secrets
+   - Deploy infrastructure services
+   - Deploy monitoring stack
+   - Deploy application services
+   - Deploy network policies
+   - Wait for services to be ready
+   - Output Load Balancer URLs
+
+**Security Scanning**:
+- Code linting (Gradle check, Spotless)
+- Dependency scanning (OWASP Dependency Check)
+- Container scanning (Trivy on all images)
+- Infrastructure scanning (TFLint, Checkov)
+- YAML validation (yamllint)
+
+**Separate Security Workflow**: `.github/workflows/security-scan.yml`
+- Weekly scheduled scans
+- Comprehensive security analysis
+- Results in GitHub Security tab
 
 ## Cost Optimization
 
 ### Cost Breakdown
 
-1. **Azure Stack HCI Licensing**
-   - Per core licensing
-   - Azure billing for Arc services
+1. **Azure AKS Clusters**
+   - Control plane: Free (managed by Azure)
+   - Worker nodes: VM costs
+   - Load balancers: Standard SKU costs
 
 2. **Azure Services**
-   - Storage account
-   - Load balancers
+   - Storage account (blob and file shares)
+   - Container Registry (ACR)
    - Public IPs
-   - Arc-enabled services
+   - Monitoring (optional Azure Monitor)
 
-3. **Operational Costs**
-   - Power and cooling
-   - Maintenance
-   - Support
+3. **Compute Resources**
+   - Management cluster nodes
+   - Workload cluster nodes
+   - Monitoring stack resources
 
 ### Optimization Strategies
 
 - Use smaller VM sizes for non-production
 - Reduce node counts in development
-- Use Basic load balancer for test environments
-- Disable optional Arc services when not needed
-- Leverage Azure Hybrid Benefit
+- Enable cluster autoscaling
+- Use spot instances for non-critical workloads
+- Right-size monitoring stack resources
+- Clean up unused resources regularly
+
+## Current Deployment State
+
+### Infrastructure
+- Management Cluster: Deployed and operational
+- Workload Cluster: Deployed with Linux and Windows node pools
+- Azure Container Registry: Created and configured
+- Storage Account: Created with blob and file share support
+- Network: Virtual network with subnets and NSGs
+
+### Application
+- FTGO Application: 7 microservices + 4 infrastructure services
+- Namespace: `ftgo`
+- All services deployed with security contexts
+- Network policies configured
+- Secrets management implemented
+
+### Monitoring
+- Monitoring Stack: Fully deployed in `monitoring` namespace
+- Prometheus: Metrics collection and alerting
+- Grafana: Visualization and dashboards
+- Jaeger: Distributed tracing
+- Loki + Promtail: Log aggregation
+- Alertmanager: Alert routing
+- Node Exporter: Node metrics
+- Kube State Metrics: Kubernetes object metrics
+
+### CI/CD
+- Build Pipeline: Operational
+- Security Scanning: Integrated
+- Deployment Pipeline: Automated
+- All images: Built and pushed to ACR
 
 ## References
 
-- [Azure Stack HCI Documentation](https://docs.microsoft.com/azure-stack/hci/)
-- [AKS Hybrid Overview](https://docs.microsoft.com/azure/aks/hybrid/)
-- [Azure Arc-enabled Kubernetes](https://docs.microsoft.com/azure/azure-arc/kubernetes/)
+- [Azure Kubernetes Service Documentation](https://docs.microsoft.com/azure/aks/)
 - [Kubernetes Documentation](https://kubernetes.io/docs/)
 - [Calico Network Policy](https://docs.projectcalico.org/)
+- [Prometheus Documentation](https://prometheus.io/docs/)
+- [Grafana Documentation](https://grafana.com/docs/)
+- [Jaeger Documentation](https://www.jaegertracing.io/docs/)
 
 ---
 
-**Last Updated**: Based on Terraform module v1.0.0  
-**Target Kubernetes Version**: 1.28.3  
-**Target Azure Stack HCI Version**: 23H2
+**Last Updated**: Current as of latest deployment  
+**Target Kubernetes Version**: Latest stable  
+**Architecture**: Cloud-native Azure AKS
 

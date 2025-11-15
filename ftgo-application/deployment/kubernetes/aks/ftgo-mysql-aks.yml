@@ -1,0 +1,91 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftgo-mysql
+  labels:
+    name: ftgo-mysql
+spec:
+  ports:
+  - port: 3306
+    targetPort: 3306
+  clusterIP: None
+  selector:
+    role: ftgo-mysql
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: ftgo-mysql
+spec:
+  serviceName: "ftgo-mysql"
+  replicas: 1
+  selector:
+    matchLabels:
+      role: ftgo-mysql
+  template:
+    metadata:
+      labels:
+        role: ftgo-mysql
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: ftgo-mysql
+          image: acrgenticapp2932.azurecr.io/mysql:latest
+          imagePullPolicy: Always
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: false
+            runAsNonRoot: true
+            runAsUser: 999
+            capabilities:
+              drop:
+                - ALL
+          args:
+              - "--ignore-db-dir=lost+found"
+          ports:
+              - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ftgo-mysql-secrets
+                  key: mysql-root-password
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ftgo-mysql-secrets
+                  key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ftgo-mysql-secrets
+                  key: mysql-password
+          volumeMounts:
+            - name: ftgo-mysql-persistent-storage
+              mountPath: /var/lib/mysql
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+  volumeClaimTemplates:
+  - metadata:
+      name: ftgo-mysql-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      storageClassName: default
+      resources:
+        requests:
+          storage: 1Gi
+

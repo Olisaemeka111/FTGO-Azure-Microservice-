@@ -1,0 +1,136 @@
+---
+# Network Policy: Deny all ingress by default
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all-ingress
+  namespace: ftgo
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+---
+# Network Policy: Allow API Gateway to receive traffic from LoadBalancer
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-gateway-ingress
+  namespace: ftgo
+spec:
+  podSelector:
+    matchLabels:
+      svc: ftgo-api-gateway
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - namespaceSelector: {}
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+# Network Policy: Allow API Gateway to access backend services
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-api-gateway-to-backend
+  namespace: ftgo
+spec:
+  podSelector:
+    matchLabels:
+      application: ftgo
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          svc: ftgo-api-gateway
+    ports:
+    - protocol: TCP
+      port: 8080
+---
+# Network Policy: Allow services to access MySQL
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-services-to-mysql
+  namespace: ftgo
+spec:
+  podSelector:
+    matchLabels:
+      role: ftgo-mysql
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          application: ftgo
+    ports:
+    - protocol: TCP
+      port: 3306
+---
+# Network Policy: Allow services to access Kafka
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-services-to-kafka
+  namespace: ftgo
+spec:
+  podSelector:
+    matchLabels:
+      role: ftgo-kafka
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          application: ftgo
+    ports:
+    - protocol: TCP
+      port: 9092
+---
+# Network Policy: Allow Kafka to access Zookeeper
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-kafka-to-zookeeper
+  namespace: ftgo
+spec:
+  podSelector:
+    matchLabels:
+      role: ftgo-zookeeper
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          role: ftgo-kafka
+    ports:
+    - protocol: TCP
+      port: 2181
+---
+# Network Policy: Allow services to access DynamoDB
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-services-to-dynamodb
+  namespace: ftgo
+spec:
+  podSelector:
+    matchLabels:
+      svc: ftgo-dynamodb-local
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          application: ftgo
+    ports:
+    - protocol: TCP
+      port: 8000
+

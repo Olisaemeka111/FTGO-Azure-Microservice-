@@ -50,6 +50,9 @@ resource "azurerm_kubernetes_cluster" "main" {
     type = "SystemAssigned"
   }
 
+  # RBAC Configuration
+  role_based_access_control_enabled = true
+
   oidc_issuer_enabled = true
 
   # Azure Monitor for Containers

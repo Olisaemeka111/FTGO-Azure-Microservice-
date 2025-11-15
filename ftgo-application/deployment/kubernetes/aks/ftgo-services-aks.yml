@@ -1,0 +1,608 @@
+---
+# Consumer Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftgo-consumer-service
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    svc: ftgo-consumer-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftgo-consumer-service
+  labels:
+    application: ftgo
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      svc: ftgo-consumer-service
+  template:
+    metadata:
+      labels:
+        svc: ftgo-consumer-service
+        application: ftgo
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ftgo-consumer-service
+        image: acrgenticapp2932.azurecr.io/ftgo-consumer-service:latest
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 8080
+          name: httpport
+        env:
+          - name: JAVA_OPTS
+            value: "-Dsun.net.inetaddr.ttl=30 -Xmx192m"
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://ftgo-mysql/ftgo_consumer_service
+          - name: SPRING_DATASOURCE_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-consumer-db-secrets
+                key: consumer-db-username
+          - name: SPRING_DATASOURCE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-consumer-db-secrets
+                key: consumer-db-password
+          - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+            value: com.mysql.jdbc.Driver
+          - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
+            value: ftgo-kafka:9092
+          - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
+            value: ftgo-zookeeper:2181
+          - name: EVENTUATE_DATABASE_SCHEMA
+            value: ftgo_consumer_service
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+---
+# Restaurant Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftgo-restaurant-service
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    svc: ftgo-restaurant-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftgo-restaurant-service
+  labels:
+    application: ftgo
+    svc: ftgo-restaurant-service
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      svc: ftgo-restaurant-service
+  template:
+    metadata:
+      labels:
+        svc: ftgo-restaurant-service
+        application: ftgo
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ftgo-restaurant-service
+        image: acrgenticapp2932.azurecr.io/ftgo-restaurant-service:latest
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 8080
+          name: httpport
+        env:
+          - name: JAVA_OPTS
+            value: "-Dsun.net.inetaddr.ttl=30"
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://ftgo-mysql/eventuate
+          - name: SPRING_DATASOURCE_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: username
+          - name: SPRING_DATASOURCE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: password
+          - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+            value: com.mysql.jdbc.Driver
+          - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
+            value: ftgo-kafka:9092
+          - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
+            value: ftgo-zookeeper:2181
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+---
+# Order Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftgo-order-service
+  labels:
+    application: ftgo
+    app: ftgo
+spec:
+  ports:
+  - name: httpport
+    port: 8080
+    targetPort: 8080
+  - name: metricsport
+    port: 8081
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    svc: ftgo-order-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftgo-order-service
+  labels:
+    application: ftgo
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      svc: ftgo-order-service
+  template:
+    metadata:
+      labels:
+        svc: ftgo-order-service
+        application: ftgo
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ftgo-order-service
+        image: acrgenticapp2932.azurecr.io/ftgo-order-service:latest
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 8080
+          name: httpport
+        env:
+          - name: JAVA_OPTS
+            value: "-Dsun.net.inetaddr.ttl=30"
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://ftgo-mysql/eventuate
+          - name: SPRING_DATASOURCE_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: username
+          - name: SPRING_DATASOURCE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: password
+          - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+            value: com.mysql.jdbc.Driver
+          - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
+            value: ftgo-kafka:9092
+          - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
+            value: ftgo-zookeeper:2181
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "300m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+---
+# Kitchen Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftgo-kitchen-service
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    svc: ftgo-kitchen-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftgo-kitchen-service
+  labels:
+    application: ftgo
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      svc: ftgo-kitchen-service
+  template:
+    metadata:
+      labels:
+        svc: ftgo-kitchen-service
+        application: ftgo
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ftgo-kitchen-service
+        image: acrgenticapp2932.azurecr.io/ftgo-kitchen-service:latest
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 8080
+          name: httpport
+        env:
+          - name: JAVA_OPTS
+            value: "-Dsun.net.inetaddr.ttl=30"
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://ftgo-mysql/eventuate
+          - name: SPRING_DATASOURCE_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: username
+          - name: SPRING_DATASOURCE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: password
+          - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+            value: com.mysql.jdbc.Driver
+          - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
+            value: ftgo-kafka:9092
+          - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
+            value: ftgo-zookeeper:2181
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+---
+# Accounting Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftgo-accounting-service
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    svc: ftgo-accounting-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftgo-accounting-service
+  labels:
+    application: ftgo
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      svc: ftgo-accounting-service
+  template:
+    metadata:
+      labels:
+        svc: ftgo-accounting-service
+        application: ftgo
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ftgo-accounting-service
+        image: acrgenticapp2932.azurecr.io/ftgo-accounting-service:latest
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 8080
+          name: httpport
+        env:
+          - name: JAVA_OPTS
+            value: "-Dsun.net.inetaddr.ttl=30"
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://ftgo-mysql/eventuate
+          - name: SPRING_DATASOURCE_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: username
+          - name: SPRING_DATASOURCE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: password
+          - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+            value: com.mysql.jdbc.Driver
+          - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
+            value: ftgo-kafka:9092
+          - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
+            value: ftgo-zookeeper:2181
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+---
+# Order History Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftgo-order-history-service
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    svc: ftgo-order-history-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftgo-order-history-service
+  labels:
+    application: ftgo
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      svc: ftgo-order-history-service
+  template:
+    metadata:
+      labels:
+        svc: ftgo-order-history-service
+        application: ftgo
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ftgo-order-history-service
+        image: acrgenticapp2932.azurecr.io/ftgo-order-history-service:latest
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 8080
+          name: httpport
+        env:
+          - name: JAVA_OPTS
+            value: "-Dsun.net.inetaddr.ttl=30"
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://ftgo-mysql/eventuate
+          - name: SPRING_DATASOURCE_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: username
+          - name: SPRING_DATASOURCE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: password
+          - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+            value: com.mysql.jdbc.Driver
+          - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
+            value: ftgo-kafka:9092
+          - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
+            value: ftgo-zookeeper:2181
+          - name: AWS_DYNAMODB_ENDPOINT_URL
+            value: http://ftgo-dynamodb-local:8000
+          - name: AWS_ACCESS_KEY_ID
+            value: FOO_ID
+          - name: AWS_SECRET_ACCESS_KEY
+            value: FOO_SECRET
+          - name: AWS_REGION
+            value: us-west-1
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 20
+

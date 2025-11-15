@@ -1,0 +1,93 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftgo-api-gateway
+  labels:
+    name: ftgo-api-gateway
+    application: ftgo
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+  selector:
+    svc: ftgo-api-gateway
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftgo-api-gateway
+  labels:
+    application: ftgo
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      svc: ftgo-api-gateway
+  template:
+    metadata:
+      labels:
+        svc: ftgo-api-gateway
+        application: ftgo
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ftgo-api-gateway
+        image: acrgenticapp2932.azurecr.io/ftgo-api-gateway:latest
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 8080
+          name: httpport
+        env:
+          - name: JAVA_OPTS
+            value: "-Dsun.net.inetaddr.ttl=30"
+          - name: ORDER_DESTINATIONS_ORDERSERVICEURL
+            value: http://ftgo-order-service:8080
+          - name: ORDER_DESTINATIONS_ORDERHISTORYSERVICEURL
+            value: http://ftgo-order-history-service:8080
+          - name: CONSUMER_DESTINATIONS_CONSUMERSERVICEURL
+            value: http://ftgo-consumer-service:8080
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 20
+          timeoutSeconds: 5
+

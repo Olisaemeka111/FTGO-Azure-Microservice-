@@ -190,15 +190,15 @@ Order History Service
 
 ## Next Steps
 
-1. ✅ Repository cloned and analyzed
-2. ⏳ Update Kubernetes manifests for AKS compatibility
-3. ⏳ Create Azure Container Registry (or verify Docker Hub access)
-4. ⏳ Build/push container images
-5. ⏳ Create namespace
-6. ⏳ Deploy infrastructure services
-7. ⏳ Deploy application services
-8. ⏳ Configure LoadBalancer for API Gateway
-9. ⏳ Test deployment
+1. Repository cloned and analyzed
+2. Update Kubernetes manifests for AKS compatibility
+3. Create Azure Container Registry (or verify Docker Hub access)
+4. Build/push container images
+5. Create namespace
+6. Deploy infrastructure services
+7. Deploy application services
+8. Configure LoadBalancer for API Gateway
+9. Test deployment
 
 ## Files to Modify
 

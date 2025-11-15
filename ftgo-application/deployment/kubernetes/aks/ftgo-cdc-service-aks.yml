@@ -1,0 +1,99 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ftgo-cdc-service
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+    svc: ftgo-cdc-service
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ftgo-cdc-service
+  labels:
+    application: ftgo
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      svc: ftgo-cdc-service
+  template:
+    metadata:
+      labels:
+        svc: ftgo-cdc-service
+        application: ftgo
+    spec:
+      nodeSelector:
+        kubernetes.io/os: linux
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: ftgo-cdc-service
+        image: eventuateio/eventuate-cdc-service:0.4.0.RELEASE
+        imagePullPolicy: Always
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          runAsUser: 1000
+          capabilities:
+            drop:
+              - ALL
+        ports:
+        - containerPort: 8080
+          name: httpport
+        command: ["bash", "-c", "java -Dsun.net.inetaddr.ttl=30 -jar *.jar"]
+        env:
+          - name: JAVA_OPTS
+            value: "-Dsun.net.inetaddr.ttl=30"
+          - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
+            value: ftgo-kafka:29092
+          - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
+            value: ftgo-zookeeper:2181
+          - name: SPRING_DATASOURCE_URL
+            value: jdbc:mysql://ftgo-mysql/eventuate
+          - name: SPRING_DATASOURCE_USERNAME
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: username
+          - name: SPRING_DATASOURCE_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: ftgo-db-secret
+                key: password
+          - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+            value: com.mysql.jdbc.Driver
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "200m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+        readinessProbe:
+          httpGet:
+            path: /actuator/health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 20
+

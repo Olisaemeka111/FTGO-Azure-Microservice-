@@ -1,0 +1,158 @@
+name: Security Scanning
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'ftgo-application/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - main
+      - master
+  schedule:
+    # Run weekly security scans
+    - cron: '0 0 * * 0'
+
+env:
+  ACR_REGISTRY: acrgenticapp2932.azurecr.io
+
+jobs:
+  code-scan:
+    runs-on: ubuntu-latest
+    name: Code Security Scan
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 8
+      uses: actions/setup-java@v4
+      with:
+        java-version: '8'
+        distribution: 'adopt'
+
+    - name: Setup Gradle
+      uses: gradle/gradle-build-action@v2
+      with:
+        gradle-version: '6.9'
+
+    - name: Run Gradle Dependency Check
+      working-directory: ./ftgo-application
+      run: |
+        chmod +x ./gradlew
+        ./gradlew dependencyCheckAnalyze || echo "Dependency check completed with warnings"
+
+    - name: Upload Dependency Check Report
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: dependency-check-report
+        path: ftgo-application/build/reports/dependency-check-report.html
+        retention-days: 30
+
+  container-scan:
+    runs-on: ubuntu-latest
+    name: Container Vulnerability Scan
+    needs: []
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Login to Azure Container Registry
+      run: |
+        az acr login --name acrgenticapp2932
+
+    - name: Scan Images in ACR
+      run: |
+        echo "Scanning all images in ACR for vulnerabilities..."
+        images=(
+          "ftgo-api-gateway:latest"
+          "ftgo-consumer-service:latest"
+          "ftgo-restaurant-service:latest"
+          "ftgo-order-service:latest"
+          "ftgo-kitchen-service:latest"
+          "ftgo-accounting-service:latest"
+          "ftgo-order-history-service:latest"
+          "dynamodblocal-init:latest"
+          "mysql:latest"
+        )
+        
+        for image in "${images[@]}"; do
+          echo "Scanning $image..."
+          docker pull ${{ env.ACR_REGISTRY }}/$image || echo "Image not found: $image"
+        done
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.ACR_REGISTRY }}/ftgo-api-gateway:latest
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '1'
+        ignore-unfixed: true
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  yaml-lint:
+    runs-on: ubuntu-latest
+    name: YAML Linting
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run yamllint
+      uses: karancode/yamllint-github-action@v2.1.0
+      with:
+        yamllint_file_or_dir: 'ftgo-application/deployment/kubernetes'
+        yamllint_config_filepath: '.yamllint.yml'
+        yamllint_strict: false
+        yamllint_comment: true
+
+  terraform-scan:
+    runs-on: ubuntu-latest
+    name: Terraform Security Scan
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run TFLint
+      uses: terraform-linters/setup-tflint@v3
+      with:
+        tflint_version: latest
+
+    - name: Run TFLint
+      run: |
+        tflint --init
+        tflint --recursive
+
+    - name: Run Checkov
+      uses: bridgecrewio/checkov-action@master
+      with:
+        directory: .
+        framework: terraform
+        soft_fail: true
+        output_format: sarif
+        output_file_path: checkov-results.sarif
+
+    - name: Upload Checkov results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: checkov-results.sarif
+

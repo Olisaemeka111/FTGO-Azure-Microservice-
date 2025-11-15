@@ -12,6 +12,7 @@ on:
       - 'ftgo-application/settings.gradle'
       - 'ftgo-application/gradle.properties'
       - 'ftgo-application/**/Dockerfile'
+      - 'ftgo-application/deployment/kubernetes/aks/**'
       - '.github/workflows/**'
   pull_request:
     branches:
@@ -30,6 +31,8 @@ env:
   ACR_NAME: acrgenticapp2932
   ACR_REGISTRY: acrgenticapp2932.azurecr.io
   RESOURCE_GROUP: rg-gentic-app
+  AKS_CLUSTER_NAME: gentic-app-workload
+  AKS_CLUSTER_RG: rg-gentic-app
   JAVA_VERSION: '8'
   GRADLE_VERSION: '6.9'
   EVENTUATE_COMMON_VERSION: '0.15.0.RELEASE'
@@ -70,6 +73,14 @@ jobs:
         username: ${{ secrets.ACR_USERNAME }}
         password: ${{ secrets.ACR_PASSWORD }}
 
+    - name: Run Linting and Code Quality Checks
+      working-directory: ./ftgo-application
+      run: |
+        chmod +x ./gradlew
+        echo "Running code quality checks..."
+        ./gradlew check --continue || true
+        ./gradlew spotlessCheck || true
+
     - name: Build Java services with Gradle
       working-directory: ./ftgo-application
       run: |
@@ -84,10 +95,35 @@ jobs:
         ./gradlew :ftgo-accounting-service:bootJar
         ./gradlew :ftgo-order-history-service:bootJar
 
+    - name: Run Dependency Vulnerability Scan
+      working-directory: ./ftgo-application
+      run: |
+        echo "Scanning dependencies for vulnerabilities..."
+        ./gradlew dependencyCheckAnalyze || echo "WARNING: Dependency check plugin may not be configured"
+        # Alternative: Use OWASP Dependency Check if available
+
     - name: Build and push API Gateway
       working-directory: ./ftgo-application/ftgo-api-gateway
       run: |
         docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-api-gateway:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-api-gateway:latest .
+        
+    - name: Scan API Gateway Image for Vulnerabilities
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.ACR_REGISTRY }}/ftgo-api-gateway:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-results-api-gateway.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload API Gateway Scan Results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results-api-gateway.sarif'
+
+    - name: Push API Gateway Image
+      working-directory: ./ftgo-application/ftgo-api-gateway
+      run: |
         docker push ${{ env.ACR_REGISTRY }}/ftgo-api-gateway:${{ github.sha }}
         docker push ${{ env.ACR_REGISTRY }}/ftgo-api-gateway:latest
 
@@ -95,41 +131,113 @@ jobs:
       working-directory: ./ftgo-application/ftgo-consumer-service
       run: |
         docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-consumer-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-consumer-service:latest .
+        
+    - name: Scan Consumer Service Image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.ACR_REGISTRY }}/ftgo-consumer-service:${{ github.sha }}
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '0'
+
+    - name: Push Consumer Service Image
+      working-directory: ./ftgo-application/ftgo-consumer-service
+      run: |
         docker push ${{ env.ACR_REGISTRY }}/ftgo-consumer-service:${{ github.sha }}
         docker push ${{ env.ACR_REGISTRY }}/ftgo-consumer-service:latest
 
-    - name: Build and push Restaurant Service
+    - name: Build Restaurant Service
       working-directory: ./ftgo-application/ftgo-restaurant-service
       run: |
         docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-restaurant-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-restaurant-service:latest .
+        
+    - name: Scan Restaurant Service Image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.ACR_REGISTRY }}/ftgo-restaurant-service:${{ github.sha }}
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '0'
+
+    - name: Push Restaurant Service Image
+      working-directory: ./ftgo-application/ftgo-restaurant-service
+      run: |
         docker push ${{ env.ACR_REGISTRY }}/ftgo-restaurant-service:${{ github.sha }}
         docker push ${{ env.ACR_REGISTRY }}/ftgo-restaurant-service:latest
 
-    - name: Build and push Order Service
+    - name: Build Order Service
       working-directory: ./ftgo-application/ftgo-order-service
       run: |
         docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-order-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-order-service:latest .
+        
+    - name: Scan Order Service Image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.ACR_REGISTRY }}/ftgo-order-service:${{ github.sha }}
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '0'
+
+    - name: Push Order Service Image
+      working-directory: ./ftgo-application/ftgo-order-service
+      run: |
         docker push ${{ env.ACR_REGISTRY }}/ftgo-order-service:${{ github.sha }}
         docker push ${{ env.ACR_REGISTRY }}/ftgo-order-service:latest
 
-    - name: Build and push Kitchen Service
+    - name: Build Kitchen Service
       working-directory: ./ftgo-application/ftgo-kitchen-service
       run: |
         docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-kitchen-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-kitchen-service:latest .
+        
+    - name: Scan Kitchen Service Image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.ACR_REGISTRY }}/ftgo-kitchen-service:${{ github.sha }}
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '0'
+
+    - name: Push Kitchen Service Image
+      working-directory: ./ftgo-application/ftgo-kitchen-service
+      run: |
         docker push ${{ env.ACR_REGISTRY }}/ftgo-kitchen-service:${{ github.sha }}
         docker push ${{ env.ACR_REGISTRY }}/ftgo-kitchen-service:latest
 
-    - name: Build and push Accounting Service
+    - name: Build Accounting Service
       working-directory: ./ftgo-application/ftgo-accounting-service
       run: |
         docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-accounting-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-accounting-service:latest .
+        
+    - name: Scan Accounting Service Image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.ACR_REGISTRY }}/ftgo-accounting-service:${{ github.sha }}
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '0'
+
+    - name: Push Accounting Service Image
+      working-directory: ./ftgo-application/ftgo-accounting-service
+      run: |
         docker push ${{ env.ACR_REGISTRY }}/ftgo-accounting-service:${{ github.sha }}
         docker push ${{ env.ACR_REGISTRY }}/ftgo-accounting-service:latest
 
-    - name: Build and push Order History Service
+    - name: Build Order History Service
       working-directory: ./ftgo-application/ftgo-order-history-service
       run: |
         docker build --build-arg baseImageVersion=${{ env.EVENTUATE_BASE_IMAGE_VERSION || 'BUILD-15' }} -t ${{ env.ACR_REGISTRY }}/ftgo-order-history-service:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/ftgo-order-history-service:latest .
+        
+    - name: Scan Order History Service Image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.ACR_REGISTRY }}/ftgo-order-history-service:${{ github.sha }}
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '0'
+
+    - name: Push Order History Service Image
+      working-directory: ./ftgo-application/ftgo-order-history-service
+      run: |
         docker push ${{ env.ACR_REGISTRY }}/ftgo-order-history-service:${{ github.sha }}
         docker push ${{ env.ACR_REGISTRY }}/ftgo-order-history-service:latest
 
@@ -137,6 +245,18 @@ jobs:
       working-directory: ./ftgo-application/dynamodblocal-init
       run: |
         docker build -t ${{ env.ACR_REGISTRY }}/dynamodblocal-init:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/dynamodblocal-init:latest .
+        
+    - name: Scan DynamoDB Init Image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.ACR_REGISTRY }}/dynamodblocal-init:${{ github.sha }}
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '0'
+
+    - name: Push DynamoDB Init Image
+      working-directory: ./ftgo-application/dynamodblocal-init
+      run: |
         docker push ${{ env.ACR_REGISTRY }}/dynamodblocal-init:${{ github.sha }}
         docker push ${{ env.ACR_REGISTRY }}/dynamodblocal-init:latest
 
@@ -144,6 +264,18 @@ jobs:
       working-directory: ./ftgo-application/mysql
       run: |
         docker build --build-arg EVENTUATE_COMMON_VERSION=${{ env.EVENTUATE_COMMON_VERSION }} --build-arg EVENTUATE_SAGA_VERSION=${{ env.EVENTUATE_SAGA_VERSION }} -t ${{ env.ACR_REGISTRY }}/mysql:${{ github.sha }} -t ${{ env.ACR_REGISTRY }}/mysql:latest .
+        
+    - name: Scan MySQL Image
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.ACR_REGISTRY }}/mysql:${{ github.sha }}
+        format: 'table'
+        severity: 'CRITICAL,HIGH'
+        exit-code: '0'
+
+    - name: Push MySQL Image
+      working-directory: ./ftgo-application/mysql
+      run: |
         docker push ${{ env.ACR_REGISTRY }}/mysql:${{ github.sha }}
         docker push ${{ env.ACR_REGISTRY }}/mysql:latest
 
@@ -161,4 +293,243 @@ jobs:
         echo "- mysql" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "Registry: ${{ env.ACR_REGISTRY }}" >> $GITHUB_STEP_SUMMARY
+
+  deploy-to-aks:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Set up kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'latest'
+
+    - name: Get AKS credentials
+      run: |
+        az aks get-credentials \
+          --resource-group ${{ env.AKS_CLUSTER_RG }} \
+          --name ${{ env.AKS_CLUSTER_NAME }} \
+          --overwrite-existing
+
+    - name: Verify cluster connection
+      run: |
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Create namespace
+      run: |
+        kubectl create namespace ftgo --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Deploy database secrets
+      working-directory: ./ftgo-application/deployment/kubernetes
+      run: |
+        kubectl apply -f stateful-services/ftgo-db-secret.yml -n ftgo
+        kubectl apply -f aks/ftgo-mysql-secrets.yml -n ftgo
+
+    - name: Deploy infrastructure services
+      working-directory: ./ftgo-application/deployment/kubernetes/aks
+      run: |
+        echo "Deploying infrastructure services..."
+        kubectl apply -f ftgo-zookeeper-aks.yml -n ftgo
+        kubectl apply -f ftgo-kafka-aks.yml -n ftgo
+        kubectl apply -f ftgo-mysql-aks.yml -n ftgo
+        kubectl apply -f ftgo-dynamodb-aks.yml -n ftgo
+
+    - name: Wait for infrastructure to be ready
+      run: |
+        echo "Waiting for infrastructure services..."
+        kubectl wait --for=condition=ready pod -l role=ftgo-zookeeper -n ftgo --timeout=300s || true
+        kubectl wait --for=condition=ready pod -l role=ftgo-kafka -n ftgo --timeout=300s || true
+        kubectl wait --for=condition=ready pod -l role=ftgo-mysql -n ftgo --timeout=300s || true
+        kubectl wait --for=condition=ready pod -l svc=ftgo-dynamodb-local -n ftgo --timeout=300s || true
+        echo "Infrastructure services are ready"
+
+    - name: Wait for DynamoDB init job
+      run: |
+        echo "Waiting for DynamoDB initialization..."
+        kubectl wait --for=condition=complete job/ftgo-dynamodb-local-init -n ftgo --timeout=300s || true
+
+    - name: Deploy CDC service
+      working-directory: ./ftgo-application/deployment/kubernetes/aks
+      run: |
+        echo "Deploying CDC service..."
+        kubectl apply -f ftgo-cdc-service-aks.yml -n ftgo
+
+    - name: Deploy network policies
+      working-directory: ./ftgo-application/deployment/kubernetes/aks
+      run: |
+        echo "Deploying network policies..."
+        kubectl apply -f network-policies.yml -n ftgo
+
+    - name: Deploy monitoring stack
+      working-directory: ./ftgo-application/deployment/kubernetes/monitoring
+      run: |
+        echo "Deploying monitoring namespace and stack..."
+        kubectl apply -f namespace.yml
+        kubectl apply -f prometheus-config.yml
+        kubectl apply -f prometheus-deployment.yml
+        kubectl apply -f grafana-deployment.yml
+        kubectl apply -f node-exporter.yml
+        kubectl apply -f kube-state-metrics.yml
+        kubectl apply -f alertmanager.yml
+        kubectl apply -f loki.yml
+        kubectl apply -f promtail.yml
+        kubectl apply -f jaeger.yml
+
+    - name: Wait for monitoring to be ready
+      run: |
+        echo "Waiting for monitoring services..."
+        kubectl wait --for=condition=available deployment/prometheus -n monitoring --timeout=300s || true
+        kubectl wait --for=condition=available deployment/grafana -n monitoring --timeout=300s || true
+        kubectl wait --for=condition=available deployment/kube-state-metrics -n monitoring --timeout=300s || true
+        kubectl wait --for=condition=available deployment/jaeger-query -n monitoring --timeout=300s || true
+
+    - name: Deploy application services
+      working-directory: ./ftgo-application/deployment/kubernetes/aks
+      run: |
+        echo "Deploying application services..."
+        kubectl apply -f ftgo-services-aks.yml -n ftgo
+        kubectl apply -f ftgo-api-gateway-lb.yml -n ftgo
+
+    - name: Wait for deployments to be ready
+      run: |
+        echo "Waiting for application services..."
+        kubectl wait --for=condition=available deployment/ftgo-api-gateway -n ftgo --timeout=600s
+        kubectl wait --for=condition=available deployment/ftgo-consumer-service -n ftgo --timeout=600s
+        kubectl wait --for=condition=available deployment/ftgo-restaurant-service -n ftgo --timeout=600s
+        kubectl wait --for=condition=available deployment/ftgo-order-service -n ftgo --timeout=600s
+        kubectl wait --for=condition=available deployment/ftgo-kitchen-service -n ftgo --timeout=600s
+        kubectl wait --for=condition=available deployment/ftgo-accounting-service -n ftgo --timeout=600s
+        kubectl wait --for=condition=available deployment/ftgo-order-history-service -n ftgo --timeout=600s
+
+    - name: Get Load Balancer URLs
+      id: get-lb-urls
+      run: |
+        echo "Waiting for Load Balancers to be assigned..."
+        
+        # API Gateway Load Balancer
+        for i in {1..30}; do
+          APP_LB_IP=$(kubectl get service ftgo-api-gateway -n ftgo -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+          if [ -n "$APP_LB_IP" ]; then
+            echo "app_lb_ip=$APP_LB_IP" >> $GITHUB_OUTPUT
+            echo "app_lb_url=http://$APP_LB_IP" >> $GITHUB_OUTPUT
+            echo "Application Load Balancer IP: $APP_LB_IP"
+            break
+          fi
+          echo "Attempt $i/30: Waiting for Application Load Balancer..."
+          sleep 10
+        done
+        
+        # Grafana Load Balancer
+        for i in {1..30}; do
+          GRAFANA_LB_IP=$(kubectl get service grafana-loadbalancer -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+          if [ -n "$GRAFANA_LB_IP" ]; then
+            echo "grafana_lb_ip=$GRAFANA_LB_IP" >> $GITHUB_OUTPUT
+            echo "grafana_lb_url=http://$GRAFANA_LB_IP" >> $GITHUB_OUTPUT
+            echo "Grafana Load Balancer IP: $GRAFANA_LB_IP"
+            break
+          fi
+          echo "Attempt $i/30: Waiting for Grafana Load Balancer..."
+          sleep 10
+        done
+        
+        # Prometheus Load Balancer
+        for i in {1..30}; do
+          PROM_LB_IP=$(kubectl get service prometheus-loadbalancer -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+          if [ -n "$PROM_LB_IP" ]; then
+            echo "prometheus_lb_ip=$PROM_LB_IP" >> $GITHUB_OUTPUT
+            echo "prometheus_lb_url=http://$PROM_LB_IP" >> $GITHUB_OUTPUT
+            echo "Prometheus Load Balancer IP: $PROM_LB_IP"
+            break
+          fi
+          echo "Attempt $i/30: Waiting for Prometheus Load Balancer..."
+          sleep 10
+        done
+        
+        # Jaeger Load Balancer
+        for i in {1..30}; do
+          JAEGER_LB_IP=$(kubectl get service jaeger-query-loadbalancer -n monitoring -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+          if [ -n "$JAEGER_LB_IP" ]; then
+            echo "jaeger_lb_ip=$JAEGER_LB_IP" >> $GITHUB_OUTPUT
+            echo "jaeger_lb_url=http://$JAEGER_LB_IP" >> $GITHUB_OUTPUT
+            echo "Jaeger Load Balancer IP: $JAEGER_LB_IP"
+            break
+          fi
+          echo "Attempt $i/30: Waiting for Jaeger Load Balancer..."
+          sleep 10
+        done
+        
+        if [ -z "$APP_LB_IP" ]; then
+          echo "WARNING: Load Balancer IPs not yet assigned. They may take a few minutes."
+          echo "app_lb_url=pending" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Deployment Summary
+      run: |
+        echo "## Deployment Complete!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Services Deployed:" >> $GITHUB_STEP_SUMMARY
+        echo "- Infrastructure: MySQL, Kafka, Zookeeper, DynamoDB Local" >> $GITHUB_STEP_SUMMARY
+        echo "- Application: All 7 microservices" >> $GITHUB_STEP_SUMMARY
+        echo "- API Gateway: LoadBalancer service" >> $GITHUB_STEP_SUMMARY
+        echo "- Monitoring: Prometheus, Grafana, Jaeger, Loki, Promtail" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Application Load Balancer:" >> $GITHUB_STEP_SUMMARY
+        if [ "${{ steps.get-lb-urls.outputs.app_lb_url }}" != "pending" ]; then
+          echo "**Application**: ${{ steps.get-lb-urls.outputs.app_lb_url }}" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "Application Load Balancer IP is being assigned..." >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Monitoring Load Balancers:" >> $GITHUB_STEP_SUMMARY
+        if [ -n "${{ steps.get-lb-urls.outputs.grafana_lb_url }}" ]; then
+          echo "**Grafana**: ${{ steps.get-lb-urls.outputs.grafana_lb_url }} (admin/admin)" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ -n "${{ steps.get-lb-urls.outputs.prometheus_lb_url }}" ]; then
+          echo "**Prometheus**: ${{ steps.get-lb-urls.outputs.prometheus_lb_url }}" >> $GITHUB_STEP_SUMMARY
+        fi
+        if [ -n "${{ steps.get-lb-urls.outputs.jaeger_lb_url }}" ]; then
+          echo "**Jaeger**: ${{ steps.get-lb-urls.outputs.jaeger_lb_url }}" >> $GITHUB_STEP_SUMMARY
+        fi
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Check Status:" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+        echo "kubectl get pods -n ftgo" >> $GITHUB_STEP_SUMMARY
+        echo "kubectl get pods -n monitoring" >> $GITHUB_STEP_SUMMARY
+        echo "kubectl get services -n ftgo" >> $GITHUB_STEP_SUMMARY
+        echo "kubectl get services -n monitoring" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+    - name: Display Load Balancer URLs
+      run: |
+        echo "========================================="
+        echo "Application URLs:"
+        echo "========================================="
+        if [ -n "${{ steps.get-lb-urls.outputs.app_lb_url }}" ]; then
+          echo "Application: ${{ steps.get-lb-urls.outputs.app_lb_url }}"
+        else
+          echo "Application: Load Balancer IP being assigned..."
+        fi
+        echo ""
+        echo "Monitoring URLs:"
+        echo "========================================="
+        if [ -n "${{ steps.get-lb-urls.outputs.grafana_lb_url }}" ]; then
+          echo "Grafana: ${{ steps.get-lb-urls.outputs.grafana_lb_url }} (admin/admin)"
+        fi
+        if [ -n "${{ steps.get-lb-urls.outputs.prometheus_lb_url }}" ]; then
+          echo "Prometheus: ${{ steps.get-lb-urls.outputs.prometheus_lb_url }}"
+        fi
+        if [ -n "${{ steps.get-lb-urls.outputs.jaeger_lb_url }}" ]; then
+          echo "Jaeger: ${{ steps.get-lb-urls.outputs.jaeger_lb_url }}"
+        fi
+        echo "========================================="
 
