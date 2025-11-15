@@ -59,7 +59,7 @@ spec:
   - name: agent-sampling
     port: 6831
     protocol: UDP
-  - name: agent-sampling-legacy
+  - name: thrift-legacy
     port: 6832
     protocol: UDP
   selector:
@@ -232,7 +232,7 @@ spec:
           name: jaeger-thrift
           protocol: UDP
         - containerPort: 6832
-          name: jaeger-thrift-legacy
+          name: thrift-legacy
           protocol: UDP
         - containerPort: 5778
           name: config-rest
