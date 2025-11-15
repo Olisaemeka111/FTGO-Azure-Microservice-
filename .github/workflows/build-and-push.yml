@@ -364,7 +364,7 @@ jobs:
     - name: Wait for DynamoDB init job
       run: |
         echo "Waiting for DynamoDB initialization..."
-        kubectl wait --for=condition=complete job/ftgo-dynamodb-local-init -n ftgo --timeout=300s || true
+        kubectl wait --for=condition=complete job/ftgo-dynamodb-local-init -n ftgo --timeout=60s || echo "DynamoDB init job still running (will complete in background)"
 
     - name: Deploy CDC service
       working-directory: ./ftgo-application/deployment/kubernetes/aks
