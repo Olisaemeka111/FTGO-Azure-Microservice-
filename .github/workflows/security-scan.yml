@@ -23,6 +23,9 @@ jobs:
   code-scan:
     runs-on: ubuntu-latest
     name: Code Security Scan
+    permissions:
+      contents: read
+      actions: read
     
     steps:
     - name: Checkout code
@@ -46,7 +49,7 @@ jobs:
         ./gradlew dependencyCheckAnalyze || echo "Dependency check completed with warnings"
 
     - name: Upload Dependency Check Report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: dependency-check-report
@@ -57,6 +60,10 @@ jobs:
     runs-on: ubuntu-latest
     name: Container Vulnerability Scan
     needs: []
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     
     steps:
     - name: Checkout code
@@ -102,7 +109,7 @@ jobs:
         ignore-unfixed: true
 
     - name: Upload Trivy results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: 'trivy-results.sarif'
@@ -110,6 +117,8 @@ jobs:
   yaml-lint:
     runs-on: ubuntu-latest
     name: YAML Linting
+    permissions:
+      contents: read
     
     steps:
     - name: Checkout code
@@ -126,6 +135,10 @@ jobs:
   terraform-scan:
     runs-on: ubuntu-latest
     name: Terraform Security Scan
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
     
     steps:
     - name: Checkout code
@@ -151,7 +164,7 @@ jobs:
         output_file_path: checkov-results.sarif
 
     - name: Upload Checkov results
-      uses: github/codeql-action/upload-sarif@v2
+      uses: github/codeql-action/upload-sarif@v3
       if: always()
       with:
         sarif_file: checkov-results.sarif
