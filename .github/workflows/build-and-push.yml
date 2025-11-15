@@ -120,8 +120,9 @@ jobs:
         severity: 'CRITICAL,HIGH'
 
     - name: Upload API Gateway Scan Results
-      uses: github/codeql-action/upload-sarif@v3
+      uses: github/codeql-action/upload-sarif@v4
       if: always()
+      continue-on-error: true
       with:
         sarif_file: 'trivy-results-api-gateway.sarif'
 
