@@ -92,14 +92,18 @@ spec:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 10
 ---
 # Restaurant Service
 apiVersion: v1
@@ -176,6 +180,8 @@ spec:
                 key: password
           - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
             value: com.mysql.jdbc.Driver
+          - name: SPRING_JPA_DATABASE_PLATFORM
+            value: org.hibernate.dialect.MySQL8Dialect
           - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
             value: ftgo-kafka:9092
           - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
@@ -191,14 +197,18 @@ spec:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 10
 ---
 # Order Service
 apiVersion: v1
@@ -299,14 +309,18 @@ spec:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 10
 ---
 # Kitchen Service
 apiVersion: v1
@@ -382,6 +396,8 @@ spec:
                 key: password
           - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
             value: com.mysql.jdbc.Driver
+          - name: SPRING_JPA_DATABASE_PLATFORM
+            value: org.hibernate.dialect.MySQL8Dialect
           - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
             value: ftgo-kafka:9092
           - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
@@ -397,14 +413,18 @@ spec:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 10
 ---
 # Accounting Service
 apiVersion: v1
@@ -480,6 +500,8 @@ spec:
                 key: password
           - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
             value: com.mysql.jdbc.Driver
+          - name: SPRING_JPA_DATABASE_PLATFORM
+            value: org.hibernate.dialect.MySQL8Dialect
           - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
             value: ftgo-kafka:9092
           - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
@@ -495,14 +517,18 @@ spec:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 60
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 10
 ---
 # Order History Service
 apiVersion: v1
@@ -603,12 +629,16 @@ spec:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 5
         readinessProbe:
           httpGet:
             path: /actuator/health
             port: 8080
-          initialDelaySeconds: 30
-          periodSeconds: 20
+          initialDelaySeconds: 180
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 10
 
