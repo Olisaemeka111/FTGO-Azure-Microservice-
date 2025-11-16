@@ -1,0 +1,68 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: ftgo-mysql-init
+  namespace: ftgo
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: mysql-init
+        image: mysql:8.0
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -e
+          echo "Waiting for MySQL to be ready..."
+          until mysql -h ftgo-mysql -u root -prootpassword -e "SELECT 1" >/dev/null 2>&1; do
+            echo "MySQL is not ready yet. Waiting..."
+            sleep 2
+          done
+          echo "MySQL is ready. Creating databases..."
+          
+          mysql -h ftgo-mysql -u root -prootpassword <<EOF
+          -- Create databases
+          CREATE DATABASE IF NOT EXISTS eventuate;
+          CREATE DATABASE IF NOT EXISTS ftgo_consumer_service;
+          CREATE DATABASE IF NOT EXISTS ftgo_order_service;
+          CREATE DATABASE IF NOT EXISTS ftgo_restaurant_service;
+          CREATE DATABASE IF NOT EXISTS ftgo_kitchen_service;
+          CREATE DATABASE IF NOT EXISTS ftgo_accounting_service;
+          CREATE DATABASE IF NOT EXISTS ftgo_order_history_service;
+          
+          -- Create users if they don't exist
+          CREATE USER IF NOT EXISTS 'mysqluser'@'%' IDENTIFIED BY 'mysqlpw';
+          CREATE USER IF NOT EXISTS 'ftgo_consumer_service_user'@'%' IDENTIFIED BY 'ftgo_consumer_service_password';
+          CREATE USER IF NOT EXISTS 'ftgo_order_service_user'@'%' IDENTIFIED BY 'ftgo_order_service_password';
+          CREATE USER IF NOT EXISTS 'ftgo_restaurant_service_user'@'%' IDENTIFIED BY 'ftgo_restaurant_service_password';
+          CREATE USER IF NOT EXISTS 'ftgo_kitchen_service_user'@'%' IDENTIFIED BY 'ftgo_kitchen_service_password';
+          CREATE USER IF NOT EXISTS 'ftgo_accounting_service_user'@'%' IDENTIFIED BY 'ftgo_accounting_service_password';
+          CREATE USER IF NOT EXISTS 'ftgo_order_history_service_user'@'%' IDENTIFIED BY 'ftgo_order_history_service_password';
+          
+          -- Grant permissions
+          GRANT ALL PRIVILEGES ON eventuate.* TO 'mysqluser'@'%';
+          GRANT ALL PRIVILEGES ON ftgo_consumer_service.* TO 'ftgo_consumer_service_user'@'%';
+          GRANT ALL PRIVILEGES ON ftgo_order_service.* TO 'ftgo_order_service_user'@'%';
+          GRANT ALL PRIVILEGES ON ftgo_restaurant_service.* TO 'ftgo_restaurant_service_user'@'%';
+          GRANT ALL PRIVILEGES ON ftgo_kitchen_service.* TO 'ftgo_kitchen_service_user'@'%';
+          GRANT ALL PRIVILEGES ON ftgo_accounting_service.* TO 'ftgo_accounting_service_user'@'%';
+          GRANT ALL PRIVILEGES ON ftgo_order_history_service.* TO 'ftgo_order_history_service_user'@'%';
+          
+          FLUSH PRIVILEGES;
+          EOF
+          
+          echo "Databases and users created successfully!"
+          mysql -h ftgo-mysql -u root -prootpassword -e "SHOW DATABASES;"
+        env:
+        - name: MYSQL_HOST
+          value: ftgo-mysql
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: ftgo-mysql-secrets
+              key: mysql-root-password
+

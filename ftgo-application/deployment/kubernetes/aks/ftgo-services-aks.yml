@@ -73,6 +73,8 @@ spec:
                 key: consumer-db-password
           - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
             value: com.mysql.jdbc.Driver
+          - name: SPRING_JPA_DATABASE_PLATFORM
+            value: org.hibernate.dialect.MySQL8Dialect
           - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
             value: ftgo-kafka:9092
           - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
@@ -280,6 +282,8 @@ spec:
                 key: password
           - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
             value: com.mysql.jdbc.Driver
+          - name: SPRING_JPA_DATABASE_PLATFORM
+            value: org.hibernate.dialect.MySQL8Dialect
           - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
             value: ftgo-kafka:9092
           - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING
@@ -574,6 +578,8 @@ spec:
                 key: password
           - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
             value: com.mysql.jdbc.Driver
+          - name: SPRING_JPA_DATABASE_PLATFORM
+            value: org.hibernate.dialect.MySQL8Dialect
           - name: EVENTUATELOCAL_KAFKA_BOOTSTRAP_SERVERS
             value: ftgo-kafka:9092
           - name: EVENTUATELOCAL_ZOOKEEPER_CONNECTION_STRING

@@ -361,6 +361,14 @@ jobs:
         kubectl wait --for=condition=ready pod -l svc=ftgo-dynamodb-local -n ftgo --timeout=300s || true
         echo "Infrastructure services are ready"
 
+    - name: Initialize MySQL databases
+      working-directory: ./ftgo-application/deployment/kubernetes/aks
+      run: |
+        echo "Initializing MySQL databases..."
+        kubectl apply -f ftgo-mysql-init.yml -n ftgo
+        kubectl wait --for=condition=complete job/ftgo-mysql-init -n ftgo --timeout=300s || echo "MySQL init job completed or still running"
+        echo "MySQL databases initialized"
+
     - name: Wait for DynamoDB init job
       run: |
         echo "Waiting for DynamoDB initialization..."

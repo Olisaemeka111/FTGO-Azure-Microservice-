@@ -34,8 +34,23 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
-        seccompProfile:
-          type: RuntimeDefault
+      seccompProfile:
+        type: RuntimeDefault
+      initContainers:
+        - name: remove-lost-found
+          image: busybox:1.35
+          command: ['sh', '-c', 'rm -rf /var/lib/kafka/data/lost+found || true']
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: false
+            runAsUser: 0
+            capabilities:
+              add:
+                - CHOWN
+                - FOWNER
+          volumeMounts:
+            - name: ftgo-kafka-persistent-storage
+              mountPath: /var/lib/kafka/data
       containers:
         - name: ftgo-kafka
           image: confluentinc/cp-kafka:5.2.4
