@@ -34,8 +34,8 @@ spec:
         runAsNonRoot: true
         runAsUser: 1000
         fsGroup: 1000
-      seccompProfile:
-        type: RuntimeDefault
+        seccompProfile:
+          type: RuntimeDefault
       initContainers:
         - name: remove-lost-found
           image: busybox:1.35
