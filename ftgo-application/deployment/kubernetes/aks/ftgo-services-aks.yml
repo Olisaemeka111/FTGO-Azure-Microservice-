@@ -82,7 +82,7 @@ spec:
         resources:
           requests:
             memory: "256Mi"
-            cpu: "200m"
+            cpu: "100m"
           limits:
             memory: "512Mi"
             cpu: "500m"
@@ -181,7 +181,7 @@ spec:
         resources:
           requests:
             memory: "256Mi"
-            cpu: "200m"
+            cpu: "100m"
           limits:
             memory: "512Mi"
             cpu: "500m"
@@ -287,7 +287,7 @@ spec:
         resources:
           requests:
             memory: "512Mi"
-            cpu: "300m"
+            cpu: "150m"
           limits:
             memory: "1Gi"
             cpu: "1000m"
@@ -385,7 +385,7 @@ spec:
         resources:
           requests:
             memory: "256Mi"
-            cpu: "200m"
+            cpu: "100m"
           limits:
             memory: "512Mi"
             cpu: "500m"
@@ -483,7 +483,7 @@ spec:
         resources:
           requests:
             memory: "256Mi"
-            cpu: "200m"
+            cpu: "100m"
           limits:
             memory: "512Mi"
             cpu: "500m"
@@ -589,7 +589,7 @@ spec:
         resources:
           requests:
             memory: "256Mi"
-            cpu: "200m"
+            cpu: "100m"
           limits:
             memory: "512Mi"
             cpu: "500m"
